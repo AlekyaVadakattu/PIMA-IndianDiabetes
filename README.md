@@ -1,4 +1,4 @@
-# PIMA-IndianDiabetes
+# Understanding Diabetes Prevalence in PIMA Indians
 
 **Introduction:**
 
