@@ -1,0 +1,188 @@
+---
+title: "Final Project"
+author: "Alekya Vadakattu"
+date: "5/11/2023"
+output:
+  pdf_document: default
+  word_document: default
+---
+
+Loading the dataset
+
+```{r}
+library(ggplot2)
+library(gridExtra)
+
+# Load the data
+data_used <- read.csv("C:/Users/apoor_b31k2hq/OneDrive/Desktop/STAT R Projects/Alekya Project/diabetes.csv")
+
+```
+
+```{r}
+#Remove missing values
+data_used=na.omit(data_used)
+# Create the plot before removing outliers
+Before_Outliers <- ggplot(data_used, aes(x = BloodPressure, y = Glucose)) +
+  geom_point() +
+  ggtitle("Before Removing Outliers") + 
+  xlab("Blood Pressure") + 
+  ylab("Glucose") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Remove the outliers
+data_used <- data_used[data_used$BloodPressure > 25 & data_used$BloodPressure < 100,]
+data_used <- data_used[data_used$Glucose > 50 & data_used$Glucose < 190,]
+data_used
+# Create the plot after removing outliers
+After_Outliers <- ggplot(data_used, aes(x = BloodPressure, y = Glucose)) +
+  geom_point() +
+  ggtitle("After Removing Outliers") +
+  xlab("Blood Pressure") +
+  ylab("Glucose") +
+  theme(plot.title = element_text(hjust = 0.5))
+
+# Arrange the plots side-by-side
+grid.arrange(Before_Outliers, After_Outliers, ncol = 2, widths = c(6, 6))
+```
+
+Correlation Scatterplot:
+
+```{r}
+# Load necessary packages
+library(ggplot2)
+library(GGally)
+
+
+df <- data_used
+
+# create a correlation matrix
+cor_matrix <- cor(df[, 1:8])
+
+
+
+# Create a correlation scatterplot using ggplot2
+ggplot(data_used, aes(x = Glucose, y = BloodPressure)) +
+  geom_point() +
+  labs(title = "Correlation Scatterplot: Glucose vs. Blood Pressure")
+
+# Create a correlation matrix using GGally
+ggpairs(data_used, columns = c("Glucose", "BloodPressure", "BMI", "Age", "Outcome"), 
+        title = "Correlation Matrix")
+```
+
+Correlation Matrix:
+
+```{r}
+library(reshape2)
+library(ggplot2)
+library(RColorBrewer)
+# plot a heatmap of the correlation matrix
+ggplot(data = melt(cor_matrix)) +
+  geom_tile(aes(x = Var1, y = Var2, fill = value)) +
+  scale_fill_gradientn(colours = brewer.pal(10, "RdBu"), name = "Correlation") +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1)) +
+  ggtitle("Correlation Matrix Heatmap")
+```
+
+Histograms:
+
+```{r}
+# load necessary libraries
+library(ggplot2)
+library(reshape2)
+library(RColorBrewer)
+library(dplyr)
+library(tidyr)
+
+# Load the dataset
+# Create histograms for all variables except "Outcome"
+df %>% select(-Outcome) %>% 
+  gather() %>% 
+  ggplot(aes(x = value, fill = key)) +
+  geom_histogram(bins = 10, alpha = 0.5, position = "identity") +
+  facet_wrap(~ key, scales = "free") +
+  theme_bw()
+```
+
+Box plot:
+
+```{r}
+data_long <- data_used %>%
+  select(Pregnancies, BMI, BloodPressure, Outcome) %>%
+  pivot_longer(-Outcome, names_to = "Variable", values_to = "Value")
+
+ggplot(data_long, aes(x = Variable, y = Value)) +
+  geom_boxplot() +
+  facet_wrap(~ Outcome, scales = "free") +
+  xlab("Variable") +
+  ylab("Value") +
+  ggtitle("Distribution of Predictor Variables by Diabetes Outcome")
+```
+
+Bar Plot of Outcome:
+
+```{r}
+ggplot(data_used, aes(x = factor(Outcome))) +
+  geom_bar() +
+  xlab("Diabetes Outcome") +
+  ylab("Frequency") +
+  ggtitle("Distribution of Diabetes Outcome")
+```
+
+Research Question 1:
+
+1.  What is the most important predictor variable for predicting the likelihood of diabetes?
+
+```{r}
+library(randomForest)
+diabetes = data_used
+set.seed(123)
+train_index <- sample(1:nrow(diabetes), 0.7*nrow(diabetes))
+train_data <- diabetes[train_index,]
+testData <- diabetes[-train_index,]
+rf_model <- randomForest(Outcome ~ Pregnancies + Glucose + BloodPressure + SkinThickness + Insulin + BMI + DiabetesPedigreeFunction + Age, data=train_data)
+var_imp <- importance(rf_model)
+varImpPlot(rf_model, main="Random Forest Model")
+```
+
+Based on the analysis of the random forest model output, Glucose stands out as the most important factor within the data set.Understanding the significance of Glucose can provide valuable insights into the relationship between this variable and the target variable, aiding in the identification of potential risk factors or predictive indicators in our dataset.
+
+Research Question 2:
+
+```{r}
+model <- glm(Outcome ~ Pregnancies + BMI + BloodPressure, data = diabetes, family = "binomial")
+
+# Make predictions on the test set
+predictions <- predict(model, newdata = testData, type = "response")
+
+# Convert predictions to binary outcomes (0 or 1)
+predictions <- ifelse(predictions >= 0.5, 1, 0)
+
+# Calculate accuracy of the model
+accuracy <- sum(predictions == testData$Outcome) / nrow(testData) *100
+
+# Print accuracy of the model
+print(paste("Accuracy of the model:", round(accuracy, 2),"%"))
+```
+
+Logistic regression is a statistical technique commonly used to model the relationship between predictor variables and binary outcomes. The obtained accuracy of 68.26% suggests a moderate level of predictive performance for the logistic regression model in this particular context.
+
+```{r}
+# Load the required packages
+library(tidyverse)
+library(broom)
+
+# Fit the logistic regression model
+model <- glm(Outcome ~ Age + BMI + BloodPressure + Pregnancies + Insulin, data = diabetes, family = binomial)
+
+# Get the model summary
+summary(model)
+
+# Get the model coefficients
+coef(model)
+
+# Get the model goodness of fit measures
+glance(model)
+```
+
+The provided output represents the logistic regression model fitted to the diabetes dataset. The coefficients indicate the estimated effect of each predictor variable (Age, BMI, BloodPressure, Pregnancies, Insulin) on the log-odds of the Outcome variable. Significant coefficients (p \< 0.05) suggest a statistically significant relationship. For instance, Age, BMI, Pregnancies, and Insulin have significant effects, while BloodPressure does not. The model's goodness-of-fit is assessed through the deviance values, where a smaller residual deviance (755.49) compared to the null deviance (875.76) indicates a reasonable fit. The output also displays the estimated coefficients and their standard errors, providing insights into the magnitude and uncertainty associated with each predictor.
